@@ -1,2 +1,1 @@
-# snacksmp-launcher
-# snacksmp-launcher
+# SnackSMP Launcher
