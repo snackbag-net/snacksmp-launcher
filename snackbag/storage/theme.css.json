@@ -1,0 +1,15 @@
+{
+	"username": "font-size: 16px;",
+	"status": "font-size: 14px; color: #8d8d8d;",
+	"launcher_name_selected": "font-size: 20px; font-weight: bold;",
+	"launcher_name": "font-size: 20px;",
+	"launcher_part_selected": "font-size: 16px; font-weight: bold;",
+	"launcher_part": "font-size: 16px;",
+	"scrollarea": "background-color: #333333; border: 0;",
+	"version_label": "color: #8e8e8e; font-size: 14px;",
+	"settings_text": "font-size: 14px;",
+	"settings_text_bold": "font-size: 14px; font-weight: bold;",
+	"button": "QPushButton {border: 1px solid #717171; font-weight: bold;} QPushButton:pressed {border: 1px solid white;}",
+	"changelog_title": "font-size: 20px; font-weight: bold; text-transform: uppercase;",
+	"changelog_text": "font-size: 16px;"
+}
