@@ -42,3 +42,24 @@ QLineEdit {
     padding-left: 5px;
     padding-right: 5px;
 }
+
+QComboBox {
+    background-color: #141414;
+    selection-background-color: #0e0e0e;
+    border: 0;
+    border-radius: 0;
+    padding: 0 10px 0 10px;
+}
+
+
+QComboBox::item:selected {
+    background-color: #06ab59;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #141414;
+}
+
+QListView {
+    border-radius: 0;
+}

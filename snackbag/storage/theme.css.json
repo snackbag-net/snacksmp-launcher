@@ -9,6 +9,9 @@
 	"version_label": "color: #8e8e8e; font-size: 14px;",
 	"settings_text": "font-size: 14px;",
 	"settings_text_bold": "font-size: 14px; font-weight: bold;",
+	"modpack_title": "font-size: 14px; font-weight: bold;",
+	"modpack_info": "color: #8d8d8d; font-size: 10px;",
+	"modpack_info_small": "color: #737373; font-size: 10px;",
 	"button": "QPushButton {border: 1px solid #717171; font-weight: bold;} QPushButton:pressed {border: 1px solid white;}",
 	"changelog_title": "font-size: 20px; font-weight: bold; text-transform: uppercase;",
 	"changelog_text": "font-size: 16px;"

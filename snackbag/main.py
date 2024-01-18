@@ -1,3 +1,4 @@
+import copy
 import os
 
 from PyQt6.QtGui import *
@@ -20,13 +21,25 @@ class Window(QMainWindow):
 		self.user = "JX_Snack"
 		self.rank = "Lead Developer"
 		self.buttons = []
+
+		self.storage_path = Path("snackbag") / Path("storage")
+		self.furnace_icon = self.storage_path / Path("furnace_3d.png")
+		self.crafting_table_icon = self.storage_path / Path("crafting_table_3d.png")
+		self.sand_icon = self.storage_path / Path("sand_3d.png")
+
+		self.modpack_info = h.webreq(f"{h.secondary_api_path}/../modpack.json")
+		self.modpack_info = json.loads(self.modpack_info)
+		self.active_modpack = self.modpack_info["latest"]
+		self.active_modpack_info = self.modpack_info["all"][self.active_modpack]
+		print(self.active_modpack_info)
+
 		self.reload_app()
 		self.sidebar()
 		self.setup_btns()
 
 	def sidebar(self):
 		rect = QSimpleRectangle(self)
-		rect.setRectangle(0, 0, 200, 540, "background-color: #1e1e1e;")
+		rect.setRectangle(0, 0, 200, 540, "background-color: #1a1a1a;")
 
 		name = QExtendedLabel(self)
 		name.move(80, 15)
@@ -122,13 +135,18 @@ class Window(QMainWindow):
 		version_number.setMinimumWidth(1000)
 		version_number.setStyleSheet(h.load_stylesheet(True)["version_label"])
 
+		# Big cool bold text thingies
+		self.pages["play"].append(self.play_text)
+		self.pages["changelog"].append(self.changelog_text)
+		self.pages["settings"].append(self.settings_text)
+
 	def playUI(self):
 		elems = []
 
 		# Image background Button
 		self.img_bg = QLabel(self)
 		self.img_bg.setScaledContents(True)
-		filepath = Path("snackbag") / Path("storage") / Path("launcher_bg.png")
+		filepath = self.storage_path / Path("launcher_bg.png")
 
 		self.img_bg.setFixedSize(1200, 360)
 		self.img_bg.move(0, 90)
@@ -140,27 +158,168 @@ class Window(QMainWindow):
 		self.large_play_icn.setScaledContents(True)
 		self.large_play_icn.setFixedSize(240, 55)
 		self.large_play_icn.move(480, 435)
-		self.large_play_icn.setPixmap(QPixmap(str(Path("snackbag") / Path("storage") / Path("play_button.png"))))
+		self.large_play_icn.setPixmap(QPixmap(str(self.storage_path / Path("play_button.png"))))
 		self.large_play_icn.enterEvent = lambda null=None: self.plabHover()
 		self.large_play_icn.leaveEvent = lambda null=None: self.plabUnHover()
 		self.buttons.append(self.large_play_icn)
 		elems.append(self.large_play_icn)
 
+		# Modpack icon
+		self.modpack_icn = QLabel(self)
+		self.modpack_icn.setScaledContents(True)
+		filepath = self.storage_path / Path("unknown_texture.png")
+
+		self.modpack_icn.setFixedSize(48, 48)
+		self.modpack_icn.move(200, 455)
+		self.modpack_icn.setPixmap(QPixmap(str(filepath)))
+		elems.append(self.modpack_icn)
+
+		self.modpack_title = QExtendedLabel(self)
+		self.modpack_title.setText(f"Critical Error")
+		self.modpack_title.move(250, 460)
+		self.modpack_title.setStyleSheet(h.load_stylesheet(True)["modpack_title"])
+		self.modpack_title.adjustSize()
+
+		self.modpack_desc = QExtendedLabel(self)
+		self.modpack_desc.setText(f"Please report ASAP")
+		self.modpack_desc.move(250, 475)
+		self.modpack_desc.setStyleSheet(h.load_stylesheet(True)["modpack_info"])
+		self.modpack_desc.adjustSize()
+
+		self.modpack_desc2 = QExtendedLabel(self)
+		self.modpack_desc2.setText(f"am:{self.active_modpack}-noCall?")
+		self.modpack_desc2.move(250, 485)
+		self.modpack_desc2.setStyleSheet(h.load_stylesheet(True)["modpack_info_small"])
+		self.modpack_desc2.adjustSize()
+
+		self.update_playUI_selected_modpack()
+
+		elems.append(self.modpack_title)
+		elems.append(self.modpack_desc)
+		elems.append(self.modpack_desc2)
+
 		# Play part
-		self.plab = QExtendedLabel(self)
-		self.plab.setText("Play")
-		self.plab.move(210, 50)
-		self.plab.setStyleSheet(h.load_stylesheet(True)["launcher_part_selected"])
-		elems.append(self.plab)
+		plab = QExtendedLabel(self)
+		plab.setText("Play")
+		plab.move(210, 50)
+		plab.setStyleSheet(h.load_stylesheet(True)["launcher_part_selected"])
+		plab.clicked.connect(lambda null=None: self.switch_page("play"))
+		elems.append(plab)
+		self.buttons.append(plab)
 
 		# Modpack part
 		mlab = QExtendedLabel(self)
 		mlab.setText("Modpack")
 		mlab.move(260, 50)
 		mlab.setStyleSheet(h.load_stylesheet(True)["launcher_part"])
+		mlab.clicked.connect(lambda null=None: self.switch_page("modpack"))
 		elems.append(mlab)
+		self.buttons.append(mlab)
 
 		self.pages["play"][1] = elems
+
+	def update_playUI_selected_modpack(self):
+		if self.active_modpack == self.modpack_info["latest"]:
+			icon = self.furnace_icon
+		elif self.active_modpack_info["discourage"]:
+			icon = self.sand_icon
+		else:
+			icon = self.crafting_table_icon
+
+		self.modpack_icn.setPixmap(QPixmap(str(icon)))
+
+		self.modpack_title.setText(f"Modpack v{self.active_modpack_info['sv']}")
+		self.modpack_title.adjustSize()
+
+		self.modpack_desc.setText(f"V{self.active_modpack_info['mpv']}-{self.active_modpack_info['loader']}")
+		self.modpack_desc.adjustSize()
+
+		self.modpack_desc2.setText(f"fm:{self.active_modpack_info['format']}")
+		self.modpack_desc2.adjustSize()
+
+	def modpackUI(self):
+		elems = []
+
+		# Play part
+		plab = QExtendedLabel(self)
+		plab.setText("Play")
+		plab.move(210, 50)
+		plab.setStyleSheet(h.load_stylesheet(True)["launcher_part"])
+		plab.clicked.connect(lambda null=None: self.switch_page("play"))
+		elems.append(plab)
+		self.buttons.append(plab)
+
+		# Modpack part
+		mlab = QExtendedLabel(self)
+		mlab.setText("Modpack")
+		mlab.move(260, 50)
+		mlab.setStyleSheet(h.load_stylesheet(True)["launcher_part_selected"])
+		mlab.clicked.connect(lambda null=None: self.switch_page("modpack"))
+		elems.append(mlab)
+		self.buttons.append(mlab)
+
+		msellab = QExtendedLabel(self)
+		msellab.setText("Selected modpack")
+		msellab.move(210, 80)
+		msellab.setStyleSheet(h.load_stylesheet(True)["modpack_title"])
+		msellab.adjustSize()
+		elems.append(msellab)
+
+		self.msel = QComboBox(self)
+		self.msel.move(210, 100)
+		self.msel.currentIndexChanged.connect(self.change_active_modpack)
+		self.show_all_checkmark = QCheckBox(self)
+		self.show_all_checkmark.move(210, 120)
+		self.show_all_checkmark.clicked.connect(self.update_modpackUI_modpacks)
+		elems.append(self.show_all_checkmark)
+		self.buttons.append(self.show_all_checkmark)
+
+		show_all_checkmark_text = QExtendedLabel(self)
+		show_all_checkmark_text.setText("Show all modpacks")
+		show_all_checkmark_text.move(230, 127)
+		show_all_checkmark_text.adjustSize()
+		elems.append(show_all_checkmark_text)
+
+		self.msel.view().window().setWindowFlags(Qt.WindowType.Popup | Qt.WindowType.FramelessWindowHint | Qt.WindowType.NoDropShadowWindowHint)
+		elems.append(self.msel)
+		self.update_modpackUI_modpacks(None)
+
+		self.pages["modpack"][1] = elems
+
+	def change_active_modpack(self):
+		if self.msel.currentText() == "":  # If .clear() in update_modpackUI_modpacks()
+			return
+		selm = self.msel.currentText().split()[0].replace("v", "", 1)
+		self.active_modpack = selm
+		self.active_modpack_info = self.modpack_info["all"][self.active_modpack]
+
+		self.update_playUI_selected_modpack()
+
+	def update_modpackUI_modpacks(self, e):
+		self.msel.clear()
+
+		furnace_icon = QIcon(str(self.furnace_icon))
+		crafting_icon = QIcon(str(self.crafting_table_icon))
+		sand_icon = QIcon(str(self.sand_icon))
+		i = 0
+		for item in reversed(self.modpack_info["all"]):
+			current = self.modpack_info["all"][item]
+			if item == self.modpack_info["latest"]:
+				icon = furnace_icon
+			elif current["discourage"]:
+				icon = sand_icon
+
+				if not self.show_all_checkmark.isChecked():
+					i += 1
+					continue
+			else:
+				icon = crafting_icon
+
+			self.msel.addItem(icon, f"v{item} ({current['mpv']}-{current['mcv']}-{current['sv']})")
+			if item == self.active_modpack:
+				self.msel.setCurrentIndex(i)
+			self.msel.adjustSize()
+			i += 1
 
 	def changelogUI(self):
 		elems = []
@@ -191,21 +350,32 @@ class Window(QMainWindow):
 		for element in self.pages[page][1]:
 			element.show()
 
+		for p in self.pages:
+			if len(self.pages[p]) >= 3:
+				if p == page:
+					self.pages[p][2].setStyleSheet(h.load_stylesheet(True)["launcher_name_selected"])
+				else:
+					self.pages[p][2].setStyleSheet(h.load_stylesheet(True)["launcher_name"])
+
 	def reload_app(self):
 		# Download background image
 		h.img_webreq(h.secondary_api_path + "/background.png", "launcher_bg.png")
 
 		self.pages = {
 			"play": [self.playUI, []],
+			"modpack": [self.modpackUI, []],
 			"changelog": [self.changelogUI, []],
 			"settings": [self.settingsUI, []]
 		}
-		self.current_page = None
 		self.playUI()
-		self.switch_page("play")
+		self.modpackUI()
 		self.changelogUI()
-		self.switch_page("changelog")
 		self.settingsUI()
+
+		self.current_page = None
+		self.switch_page("play")
+		self.switch_page("modpack")
+		self.switch_page("changelog")
 		self.switch_page("settings")
 
 		self.switch_page("play")
