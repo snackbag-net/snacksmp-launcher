@@ -32,7 +32,6 @@ class Window(QMainWindow):
 		self.modpack_info = json.loads(self.modpack_info)
 		self.active_modpack = self.modpack_info["latest"]
 		self.active_modpack_info = self.modpack_info["all"][self.active_modpack]
-		print(self.active_modpack_info)
 
 		self.reload_app()
 		self.sidebar()
@@ -319,7 +318,6 @@ class Window(QMainWindow):
 			self.mselbtn.setEnabled(True)
 
 	def update_modpackUI_modpacks(self, e):
-		print("call")
 		self.msel.clear()
 
 		furnace_icon = QIcon(str(self.furnace_icon))
@@ -336,14 +334,12 @@ class Window(QMainWindow):
 				if not self.show_all_checkmark.isChecked() and item == self.active_modpack:
 					i += 1
 				elif not self.show_all_checkmark.isChecked():
-					i += 1
 					continue
 			else:
 				icon = crafting_icon
 
 			self.msel.addItem(icon, f"v{item} ({current['mpv']}-{current['mcv']}-{current['sv']})")
 			if item == self.active_modpack:
-				print("yup,", item, self.active_modpack, i)
 				self.msel.setCurrentIndex(i)
 			self.msel.adjustSize()
 			i += 1
