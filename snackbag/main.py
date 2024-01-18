@@ -3,10 +3,12 @@ import os
 
 from PyQt6.QtGui import *
 from PyQt6.QtWidgets import *
+from threading import Thread
 import sys
 import snackbag.helper as h
 from pathlib import Path
 from snackbag.qtextension import *
+from snackbag.event import register_event, EventListener
 import snackbag.game as game
 import ssl
 import json
@@ -16,11 +18,13 @@ import urllib.request
 class Window(QMainWindow):
 	def __init__(self):
 		super().__init__()
+		print("Initializing Window()")
 		self.version = "Beta 1.0.0/Darwin"
 		self.setFixedSize(960, 540)
 		self.setWindowTitle("SnackSMP Launcher")
 		self.user = "JX_Snack"
 		self.rank = "Lead Developer"
+		self.game_running = False
 		self.buttons = []
 
 		self.storage_path = Path("snackbag") / Path("storage")
@@ -33,8 +37,11 @@ class Window(QMainWindow):
 		self.active_modpack = self.modpack_info["latest"]
 		self.active_modpack_info = self.modpack_info["all"][self.active_modpack]
 
+		print("Building Window()")
 		self.reload_app()
+		print("Loading sidebar")
 		self.sidebar()
+		print("Setting up cursors")
 		self.setup_btns()
 
 	def sidebar(self):
@@ -124,6 +131,7 @@ class Window(QMainWindow):
 		self.settings_btn.move(0, 450)
 		self.settings_btn.setFixedSize(200, 60)
 		self.settings_btn.clicked.connect(lambda null=None: self.switch_page("settings"))
+		self.settings_btn.setMouseTracking(True)
 
 		self.buttons.append(self.play_btn)
 		self.buttons.append(self.changelog_btn)
@@ -139,6 +147,16 @@ class Window(QMainWindow):
 		self.pages["play"].append(self.play_text)
 		self.pages["changelog"].append(self.changelog_text)
 		self.pages["settings"].append(self.settings_text)
+
+		# Status bar
+		self.status_bar = QSimpleRectangle(self)
+		self.status_bar.setRectangle(200, 520, 760, 20, "background-color: #06ab59;")
+		self.status_text = QExtendedLabel(self)
+		self.status_text.setText("Installing Minecraft")
+		self.status_text.move(205, 522)
+		self.status_text.adjustSize()
+		self.status_bar.hide()
+		self.status_text.hide()
 
 	def playUI(self):
 		elems = []
@@ -217,6 +235,11 @@ class Window(QMainWindow):
 		elems.append(mlab)
 		self.buttons.append(mlab)
 
+		register_event(EventListener.GAME_STOPPED_EVENT, self.game_finished)
+		register_event(EventListener.GAME_INSTALL_FINISHED_EVENT, self.game_install_finished)
+		register_event(EventListener.MODPACK_INSTALL_FINISHED_EVENT, self.modpack_install_finished)
+		register_event(EventListener.MODPACK_DOWNLOAD_FINISHED_EVENT, self.modpack_download_finished)
+
 		self.pages["play"][1] = elems
 
 	def update_playUI_selected_modpack(self):
@@ -271,7 +294,7 @@ class Window(QMainWindow):
 		self.msel.currentIndexChanged.connect(self.update_msel)
 		self.mselbtn = QExtendedButton(self)
 		self.mselbtn.move(210, 150)
-		self.mselbtn.setText("Select && Install")
+		self.mselbtn.setText("Select modpack")
 		self.mselbtn.setStyleSheet(h.load_stylesheet(True)["button"])
 		self.mselbtn.setFixedSize(150, 30)
 		self.mselbtn.setDisabled(True)
@@ -381,8 +404,11 @@ class Window(QMainWindow):
 					self.pages[p][2].setStyleSheet(h.load_stylesheet(True)["launcher_name"])
 
 	def reload_app(self):
+		print("Reloading Window()")
+		bg_url = h.secondary_api_path + "/background.png"
+		print(f"Downloading background from {bg_url}")
 		# Download background image
-		h.img_webreq(h.secondary_api_path + "/background.png", "launcher_bg.png")
+		h.img_webreq(bg_url, "launcher_bg.png")
 
 		self.pages = {
 			"play": [self.playUI, []],
@@ -390,11 +416,16 @@ class Window(QMainWindow):
 			"changelog": [self.changelogUI, []],
 			"settings": [self.settingsUI, []]
 		}
+		print("Building playUI")
 		self.playUI()
+		print("Building modpackUI")
 		self.modpackUI()
+		print("Building changelogUI")
 		self.changelogUI()
+		print("Building settingsUI")
 		self.settingsUI()
 
+		print("Finishing page system")
 		self.current_page = None
 		self.switch_page("play")
 		self.switch_page("modpack")
@@ -402,16 +433,58 @@ class Window(QMainWindow):
 		self.switch_page("settings")
 
 		self.switch_page("play")
+		print("Reload finished!")
 
 	def setup_btns(self):
 		for button in self.buttons:
 			button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
 	def start_game(self):
-		game.start_game(self.active_modpack_info)
+		self.game_running = True
+		self.large_play_icn.hide()
+		self.status_bar.show()
+		self.status_text.show()
+		self.status_text.setText("Installing Minecraft...")
+		self.status_text.adjustSize()
+		mpi = copy.copy(self.active_modpack_info)
+		mpi["name"] = self.active_modpack
+		game_thread = Thread(target=lambda: game.start_game(mpi, {"type": "epic"}))
+		game_thread.start()
+
+	def game_finished(self, args: dict):
+		print("GAME FINISHEd")
+		self.game_running = False
+
+	def game_install_finished(self, args: dict):
+		self.status_text.setText("Downloading Modpack...")
+		self.status_text.adjustSize()
+
+	def modpack_install_finished(self, args: dict):
+		self.status_text.setText("Playing Minecraft... (Might take a bit to start)")
+		self.status_text.adjustSize()
+
+	def modpack_download_finished(self, args: dict):
+		self.status_text.setText("Installing Modpack...")
+		self.status_text.adjustSize()
+
+	def paintEvent(self, a0):
+		if self.game_running:
+			self.large_play_icn.hide()
+			self.status_bar.show()
+			self.status_text.show()
+		elif not self.game_running and self.current_page == "play":
+			self.large_play_icn.show()
+
+		if not self.game_running:
+			self.status_text.hide()
+			self.status_bar.hide()
+
+		# Keep running
+		self.update()
 
 
 def run():
+	print("Initializing SSL stuff")
 	# We go YOLO mode
 	ctx = ssl.create_default_context()
 	ctx.check_hostname = False
@@ -419,11 +492,13 @@ def run():
 	ssl._create_default_https_context = ssl._create_unverified_context
 	h.ctx = ctx
 
+	print("Starting app")
 	app = QApplication(sys.argv)
 	font_id = QFontDatabase.addApplicationFont(str(Path(os.getcwd()) / Path("snackbag") / Path("Futura.ttf")))
 	font_id2 = QFontDatabase.addApplicationFont(str(Path(os.getcwd()) / Path("snackbag") / Path("Futura Bold.ttf")))
 
 	if font_id < 0 or font_id2 < 0:
+		print("Could not load font(s). Please report this issue!")
 		msg = QMessageBox()
 		msg.setIcon(QMessageBox.Icon.Critical)
 		msg.setText("Could not load font(s). Please report this issue!")

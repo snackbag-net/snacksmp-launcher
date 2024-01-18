@@ -47,13 +47,19 @@ def start_game(modpack_info: dict, format_args: dict = {}):
 	elif modpack_info["hard_loader"] == "fabric":
 		fabric_version = FabricVersion.with_fabric(modpack_info["mcv"], modpack_info["loader"].split(":")[2])
 		fabric_version.context = context
+		print(f"Installing Minecraft Fabric {modpack_info['loader'].split(':')[2]}")
 		game = fabric_version.install()
+		print(f"Installing modpack")
 		call_event(EventListener.GAME_INSTALL_FINISHED_EVENT)
+		install_modpack(get_name_from_format(modpack_info["name"], modpack_info["format"], format_args), modpack_info["run_folder"])
 		game.run()
 		call_event(EventListener.GAME_STOPPED_EVENT)
 	elif modpack_info["hard_loader"] == "forge":
+		print(f"Installing Minecraft {modpack_info['loader'].split(':')[1]}")
 		game = ForgeVersion(modpack_info["loader"].split(":")[1], context=context).install()
 		call_event(EventListener.GAME_INSTALL_FINISHED_EVENT)
+		print(f"Installing modpack")
+		install_modpack(get_name_from_format(modpack_info["name"], modpack_info["format"], format_args), modpack_info["run_folder"])
 		game.run()
 		call_event(EventListener.GAME_STOPPED_EVENT)
 	else:
@@ -65,7 +71,10 @@ def install_modpack(modpack_name: str, instance: str, ignore_cache: bool = False
 	install_path = f"../runs/{instance}/mods/{modpack_name}.zip"
 	hard_install_path = Path("snackbag") / Path("runs") / Path(instance) / Path("mods") / Path(f"{modpack_name}.zip")
 
+	print(f"Install path '{install_path}'")
+	print(f"Hard install path '{hard_install_path}'")
 	if os.path.isfile(hard_install_path.parent / Path("cache.txt")):
+		print("Checking cache")
 		with open(hard_install_path.parent / Path("cache.txt"), "r") as f:
 			file = f.readlines()
 			if file[0] == modpack_name:
@@ -78,13 +87,20 @@ def install_modpack(modpack_name: str, instance: str, ignore_cache: bool = False
 	except FileNotFoundError:
 		pass
 
+	print("Started downloading...")
 	os.mkdir(hard_install_path.parent)
 
-	h.img_webreq(h.secondary_api_path + f"/../{modpack_name}.zip", install_path)
+	download_url = h.secondary_api_path + f"/../v{modpack_name}.zip"
+	print(f"Download URL: {download_url}")
+	h.img_webreq(download_url, install_path)
+	call_event(EventListener.MODPACK_DOWNLOAD_FINISHED_EVENT)
+	print("Extracting ZIP")
 	with zipfile.ZipFile(hard_install_path, 'r') as zip_ref:
 		zip_ref.extractall(hard_install_path.parent)
+	print("Deleting ZIP")
 	os.remove(hard_install_path)
 
+	print("Writing cache")
 	with open(hard_install_path.parent / Path("cache.txt"), "w") as f:
 		f.write(modpack_name)
 
