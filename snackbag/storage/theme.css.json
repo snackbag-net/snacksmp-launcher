@@ -12,7 +12,7 @@
 	"modpack_title": "font-size: 14px; font-weight: bold;",
 	"modpack_info": "color: #8d8d8d; font-size: 10px;",
 	"modpack_info_small": "color: #737373; font-size: 10px;",
-	"button": "QPushButton {border: 1px solid #717171; font-weight: bold;} QPushButton:pressed {border: 1px solid white;}",
+	"button": "QPushButton {border: 1px solid #717171; font-weight: bold;} QPushButton:pressed {border: 1px solid white;} QPushButton:disabled {border: 1px solid #4d4d4d; color: #bfbfbf; font-weight: bold;}",
 	"changelog_title": "font-size: 20px; font-weight: bold; text-transform: uppercase;",
 	"changelog_text": "font-size: 16px;"
 }

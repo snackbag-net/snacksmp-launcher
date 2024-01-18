@@ -7,6 +7,7 @@ import sys
 import snackbag.helper as h
 from pathlib import Path
 from snackbag.qtextension import *
+import snackbag.game as game
 import ssl
 import json
 import urllib.request
@@ -161,6 +162,7 @@ class Window(QMainWindow):
 		self.large_play_icn.setPixmap(QPixmap(str(self.storage_path / Path("play_button.png"))))
 		self.large_play_icn.enterEvent = lambda null=None: self.plabHover()
 		self.large_play_icn.leaveEvent = lambda null=None: self.plabUnHover()
+		self.large_play_icn.mouseReleaseEvent = lambda null=None: self.start_game()
 		self.buttons.append(self.large_play_icn)
 		elems.append(self.large_play_icn)
 
@@ -231,7 +233,7 @@ class Window(QMainWindow):
 		self.modpack_title.setText(f"Modpack v{self.active_modpack_info['sv']}")
 		self.modpack_title.adjustSize()
 
-		self.modpack_desc.setText(f"V{self.active_modpack_info['mpv']}-{self.active_modpack_info['loader']}")
+		self.modpack_desc.setText(f"V{self.active_modpack_info['mpv']}/{self.active_modpack}-{self.active_modpack_info['loader']}")
 		self.modpack_desc.adjustSize()
 
 		self.modpack_desc2.setText(f"fm:{self.active_modpack_info['format']}")
@@ -259,7 +261,7 @@ class Window(QMainWindow):
 		self.buttons.append(mlab)
 
 		msellab = QExtendedLabel(self)
-		msellab.setText("Selected modpack")
+		msellab.setText("Modpack version")
 		msellab.move(210, 80)
 		msellab.setStyleSheet(h.load_stylesheet(True)["modpack_title"])
 		msellab.adjustSize()
@@ -267,7 +269,17 @@ class Window(QMainWindow):
 
 		self.msel = QComboBox(self)
 		self.msel.move(210, 100)
-		self.msel.currentIndexChanged.connect(self.change_active_modpack)
+		self.msel.currentIndexChanged.connect(self.update_msel)
+		self.mselbtn = QExtendedButton(self)
+		self.mselbtn.move(210, 150)
+		self.mselbtn.setText("Select && Install")
+		self.mselbtn.setStyleSheet(h.load_stylesheet(True)["button"])
+		self.mselbtn.setFixedSize(150, 30)
+		self.mselbtn.setDisabled(True)
+		self.mselbtn.pressed.connect(self.change_active_modpack)
+		elems.append(self.mselbtn)
+		self.buttons.append(self.mselbtn)
+
 		self.show_all_checkmark = QCheckBox(self)
 		self.show_all_checkmark.move(210, 120)
 		self.show_all_checkmark.clicked.connect(self.update_modpackUI_modpacks)
@@ -294,8 +306,20 @@ class Window(QMainWindow):
 		self.active_modpack_info = self.modpack_info["all"][self.active_modpack]
 
 		self.update_playUI_selected_modpack()
+		self.update_msel()
+		self.update_modpackUI_modpacks(None)
+
+	def update_msel(self):
+		if self.msel.currentText() == "":  # If .clear() in update_modpackUI_modpacks()
+			return
+		selm = self.msel.currentText().split()[0].replace("v", "", 1)
+		if selm == self.active_modpack:
+			self.mselbtn.setDisabled(True)
+		else:
+			self.mselbtn.setEnabled(True)
 
 	def update_modpackUI_modpacks(self, e):
+		print("call")
 		self.msel.clear()
 
 		furnace_icon = QIcon(str(self.furnace_icon))
@@ -309,7 +333,9 @@ class Window(QMainWindow):
 			elif current["discourage"]:
 				icon = sand_icon
 
-				if not self.show_all_checkmark.isChecked():
+				if not self.show_all_checkmark.isChecked() and item == self.active_modpack:
+					i += 1
+				elif not self.show_all_checkmark.isChecked():
 					i += 1
 					continue
 			else:
@@ -317,6 +343,7 @@ class Window(QMainWindow):
 
 			self.msel.addItem(icon, f"v{item} ({current['mpv']}-{current['mcv']}-{current['sv']})")
 			if item == self.active_modpack:
+				print("yup,", item, self.active_modpack, i)
 				self.msel.setCurrentIndex(i)
 			self.msel.adjustSize()
 			i += 1
@@ -383,6 +410,9 @@ class Window(QMainWindow):
 	def setup_btns(self):
 		for button in self.buttons:
 			button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+	def start_game(self):
+		game.start_game(self.active_modpack_info)
 
 
 def run():
