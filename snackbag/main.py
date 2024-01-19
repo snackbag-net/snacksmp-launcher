@@ -13,6 +13,7 @@ import snackbag.game as game
 import ssl
 import json
 import urllib.request
+import urllib.error
 
 
 class Window(QMainWindow):
@@ -58,13 +59,18 @@ class Window(QMainWindow):
 		rank.setStyleSheet("color: gray; font-size: 12px; font-family: \"Futura\";")
 		rank.setText(self.rank)
 
-		uuid = h.webreq(f"https://api.minetools.eu/uuid/{self.user}")
-		uuid = json.loads(uuid)['id']
-		user_icn_url = f'https://skins.mcstats.com/skull/{uuid}'
-		user_icn_data = urllib.request.urlopen(user_icn_url).read()
+		try:
+			uuid = h.webreq(f"https://api.minetools.eu/uuid/{self.user}")
+			uuid = json.loads(uuid)['id']
+			user_icn_url = f'https://skins.mcstats.com/skull/{uuid}'
+			user_icn_data = urllib.request.urlopen(user_icn_url).read()
 
-		user_icn_img = QImage()
-		user_icn_img.loadFromData(user_icn_data)
+
+			user_icn_img = QImage()
+			user_icn_img.loadFromData(user_icn_data)
+		except urllib.error.HTTPError:
+			print("CRITICAL: CANNOT GET UUID INFO (UUID API down?)")
+			user_icn_img = QImage(str(Path("snackbag") / Path("storage") / Path("unknown_texture.png")))
 
 		user_icn = QLabel(self)
 		user_icn.setScaledContents(True)
